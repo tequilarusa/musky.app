@@ -1,0 +1,30 @@
+«апрашиваемый номер семейства не существует. 
+  Time='04.03.16 00:22:52' App='WordToRQM:16.5.3982' ADO-version='10.0' Computer='DESKTOP-MJ1NIDD' 
+  Method: Connect.AttachRqmDot 
+  Number: 5941 = &H1735 = vbObjectError + 2147227445 = ERRMAP_APP_FIRST + 2147222247 
+  Source: Microsoft Word 
+  Description: «апрашиваемый номер семейства не существует.
+  Call Stack: Connect.AttachRqmDot() ---------------------------------------------------------------
+
+
+
+Invalid procedure call or argument 
+  Time='04.05.16 23:57:51' App='WordToRQM:16.5.3982' ADO-version='10.0' Computer='DESKTOP-MJ1NIDD' 
+  Method: Connect.UpdateCustomTools 
+  Number: 5 = &H5 = vbObjectError + 2147221509 = ERRMAP_APP_FIRST + 2147216311 
+  Source: WordToRqm16 
+  Description: Invalid procedure call or argument
+  Call Stack: Connect.UpdateCustomTools(bNew={Nothing}) --------------------------------------------
+
+
+
+Invalid procedure call or argument 
+  Time='04.05.16 23:57:51' App='WordToRQM:16.5.3982' ADO-version='10.0' Computer='DESKTOP-MJ1NIDD' 
+  Method: Connect.AddReqButtons 
+  Number: 5 = &H5 = vbObjectError + 2147221509 = ERRMAP_APP_FIRST + 2147216311 
+  Source: WordToRqm16 
+  Description: Invalid procedure call or argument
+  Call Stack: Connect.AddReqButtons() --------------------------------------------------------------
+
+
+
