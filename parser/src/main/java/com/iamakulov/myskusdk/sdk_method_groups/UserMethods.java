@@ -7,12 +7,13 @@ import com.iamakulov.myskusdk.MyskuSdk;
 import com.iamakulov.myskusdk.containers.*;
 import com.iamakulov.myskusdk.helpers.UrlHelpers;
 import com.iamakulov.myskusdk.helpers.UserHelpers;
+import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class UserMethods {
     private DocumentRetriever retriever;
@@ -23,9 +24,10 @@ public class UserMethods {
         this.cookies = cookies;
     }
 
-    void getUserDetails(User.Id userId, MyskuCallback<UserDetails> callback) {
-        retriever.get(UrlHelpers.getUserUrlFromId(userId), cookies)
-            .thenAccept(document -> {
+    void getUserDetails(User.Id userId, final MyskuCallback<UserDetails> callback) {
+        retriever.get(UrlHelpers.getUserUrlFromId(userId), cookies, new MyskuCallback<Document>() {
+            @Override
+            public void onSuccess(Document document) {
                 Element body = document.body();
 
                 String autodetectedCountry = getRowDataByTitle(body, "Автоопределение страны:").text();
@@ -34,30 +36,33 @@ public class UserMethods {
                 String karmaVoteCount = body.select(".vote_block .count").text();
                 String lastVisit = getRowDataByTitle(body, "Последний визит:").text();
 
-                List<Category> participation = getRowDataByTitle(body, "Состоит в:")
-                    .select("a")
-                    .stream()
-                    .map(e -> new CategoryBuilder()
-                        .setId(UrlHelpers.getCategoryIdFromUrl(e.attr("href")))
-                        .setName(e.text())
-                        .build()
-                    )
-                    .collect(Collectors.toList());
+                List<Category> participation = new ArrayList<>();
+                for (Element e : getRowDataByTitle(body, "Состоит в:").select("a")) {
+                    participation.add(
+                        new CategoryBuilder()
+                            .setId(UrlHelpers.getCategoryIdFromUrl(e.attr("href")))
+                            .setName(e.text())
+                            .build()
+                    );
+                }
 
-                Element personalTable = body.select(".title")
-                    .stream()
-                    .filter(element -> element.text().equals("Личное"))
-                    .collect(Collectors.toList())
-                    .get(0)
-                    .select("+ table")
-                    .get(0);
 
-                Map<String, String> personalData = personalTable.select("tr")
-                    .stream()
-                    .collect(Collectors.toMap(
-                        element -> element.select("td:first-child").text(),
-                        element -> element.select("td:last-child").text()
-                    ));
+
+                Element personalTable = null;
+                for (Element element : body.select(".title")) {
+                    if (element.text().equals("Личное")) {
+                        personalTable = element.select("+ table").first();
+                        break;
+                    }
+                }
+
+                Map<String, String> personalData = new HashMap<>();
+                for (Element element : personalTable.select("tr")) {
+                    personalData.put(
+                        element.select("td:first-child").text(),
+                        element.select("td:last-child").text()
+                    );
+                }
 
                 String realName = body.select(".nickname .note").text();
                 String registered = getRowDataByTitle(body, "Зарегистрирован:").text();
@@ -83,69 +88,79 @@ public class UserMethods {
                     .build();
 
                 callback.onSuccess(userDetails);
-            })
-            .exceptionally(throwable -> {
-                callback.onError(new MyskuError(throwable));
-                return null;
-            });
+            }
+
+            @Override
+            public void onError(MyskuError error) {
+                callback.onError(error);
+            }
+        });
     }
 
     private List<User> extractUsersFromLinksList(Element container) {
-        return container
-            .select("a")
-            .stream()
-            .map(Element::text)
-            .map(UserHelpers::createUserFromUsername)
-            .collect(Collectors.toList());
+        List<User> result = new ArrayList<>();
+
+        for (Element element : container.select("a")) {
+            result.add(UserHelpers.createUserFromUsername(element.text()));
+        }
+
+        return result;
     }
 
     private Element getRowDataByTitle(Element rowsContainer, String title) {
-        return rowsContainer.select("tr")
-            .stream()
-            .filter(row -> row.select("td:first-child").text().equals(title))
-            .collect(Collectors.toList())
-            .get(0)
-            .select("td:last-child")
-            .first();
+        Element result = null;
+
+        for (Element row : rowsContainer.select("tr")) {
+            if (row.select("td:first-child").text().equals(title)) {
+                result = row.select("td:last-child").first();
+                break;
+            }
+        }
+
+        return result;
     }
 
     void getUserComments(User.Id userId, MyskuCallback<List<Comment>> callback) {
         getUserComments(userId, 0, callback);
     }
 
-    void getUserComments(User.Id userId, int page, MyskuCallback<List<Comment>> callback) {
-        retriever.get(UrlHelpers.getUserCommentsUrlFromId(userId, page), cookies)
-            .thenAccept(document -> {
-                List<Comment> comments = document.body().select("#content .comment")
-                    .stream()
-                    .map(element -> {
-                        String username = element.select(".author").text();
-                        String authorThumbnail = element.select(".avatar").attr("href");
-                        String body = element.select(".text").text();
-                        String date = element.select(".date").text();
-                        Comment.Id id = new Comment.Id(
-                            element.select(".imglink").attr("href").replaceAll("^.*#comment", "")
-                        );
-                        String rating = element.select(".voting .total").text();
+    void getUserComments(User.Id userId, int page, final MyskuCallback<List<Comment>> callback) {
+        retriever.get(UrlHelpers.getUserCommentsUrlFromId(userId, page), cookies, new MyskuCallback<Document>() {
+            @Override
+            public void onSuccess(Document document) {
+                List<Comment> comments = new ArrayList<>();
 
-                        return new CommentBuilder()
+                for (Element element : document.body().select("#content .comment")) {
+                    String username = element.select(".author").text();
+                    String authorThumbnail = element.select(".avatar").attr("href");
+                    String body = element.select(".text").text();
+                    String date = element.select(".date").text();
+                    Comment.Id id = new Comment.Id(
+                        element.select(".imglink").attr("href").replaceAll("^.*#comment", "")
+                    );
+                    String rating = element.select(".voting .total").text();
+
+                    comments.add(
+                        new CommentBuilder()
                             .setAuthor(UserHelpers.createUserFromUsername(username))
                             .setAuthorThumbnail(authorThumbnail)
                             .setBody(body)
                             .setDate(date)
                             .setId(id)
                             .setRating(rating)
-                            .setReplies(new ArrayList<>())
-                            .build();
-                    })
-                    .collect(Collectors.toList());
+                            .setReplies(new ArrayList<Comment>())
+                            .build()
+                    );
+                }
 
                 callback.onSuccess(comments);
-            })
-            .exceptionally(throwable -> {
-                callback.onError(new MyskuError(throwable));
-                return null;
-            });
+            }
+
+            @Override
+            public void onError(MyskuError error) {
+                callback.onError(error);
+            }
+        });
     }
 
     void getUserRating(User.Id userId, MyskuCallback<String> callback) {

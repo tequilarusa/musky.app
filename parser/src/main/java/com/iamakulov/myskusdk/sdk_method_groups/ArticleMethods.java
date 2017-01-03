@@ -32,9 +32,10 @@ public class ArticleMethods {
         return CommentHelpers.parseCommentList(body.select("#content .comments").first());
     }
 
-    public void getFullArticle(ArticleContent.Id articleId, MyskuCallback<FullArticle> callback) {
-        retriever.get(UrlHelpers.getArticleUrlFromId(articleId), cookies)
-            .thenAccept(document -> {
+    public void getFullArticle(ArticleContent.Id articleId, final MyskuCallback<FullArticle> callback) {
+        retriever.get(UrlHelpers.getArticleUrlFromId(articleId), cookies, new MyskuCallback<Document>() {
+            @Override
+            public void onSuccess(Document document) {
                 ArticleContent content = ArticleContentHelpers.parseArticleContent(document.body().select(".topic").first(), document.location());
                 List<Comment> comments = parseComments(document);
 
@@ -44,16 +45,20 @@ public class ArticleMethods {
                     .build();
 
                 callback.onSuccess(article);
-            })
-            .exceptionally(throwable -> {
-                callback.onError(new MyskuError(throwable));
-                return null;
-            });
+            }
+
+            @Override
+            public void onError(MyskuError error) {
+                callback.onError(error);
+            }
+        });
     }
 
-    public void addComment(ArticleContent.Id articleId, String body, Comment.Id replyTo, MyskuCallback<Comment> callback) {
-        retriever.get(UrlHelpers.getArticleUrlFromId(articleId), cookies)
-            .thenCompose(document -> {
+    public void addComment(final ArticleContent.Id articleId, final String body, final Comment.Id replyTo, final MyskuCallback<Comment> callback) {
+        // TODO: implement
+        retriever.get(UrlHelpers.getArticleUrlFromId(articleId), cookies, new MyskuCallback<Document>() {
+            @Override
+            public void onSuccess(Document document) {
                 Map<String, String> requestParams = new HashMap<>();
                 requestParams.put("security_ls_key", extractLivestreetSecurityKey(document.html()));
                 requestParams.put("reply", replyTo.id);
@@ -64,16 +69,24 @@ public class ArticleMethods {
 
                 String requestUrl = "http://mysku.ru/blog/ajaxaddcomment/?PHPSESSID=" + cookies.get("PHPSESSID");
 
-                return retriever.post(requestUrl, requestBody, cookies);
-            })
-            // TODO: implement
-            .thenAccept(document -> {
-                callback.onSuccess(new CommentBuilder().build());
-            })
-            .exceptionally(throwable -> {
-                callback.onError(new MyskuError(throwable));
-                return null;
-            });
+                retriever.post(requestUrl, requestBody, cookies, new MyskuCallback<Document>() {
+                    @Override
+                    public void onSuccess(Document result) {
+
+                    }
+
+                    @Override
+                    public void onError(MyskuError error) {
+
+                    }
+                });
+            }
+
+            @Override
+            public void onError(MyskuError error) {
+
+            }
+        });
     }
 
     private String extractLivestreetSecurityKey(String content) {

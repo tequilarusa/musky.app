@@ -7,10 +7,12 @@ import com.iamakulov.myskusdk.MyskuSdk;
 import com.iamakulov.myskusdk.containers.*;
 import com.iamakulov.myskusdk.helpers.ArticleContentHelpers;
 import com.iamakulov.myskusdk.helpers.UrlHelpers;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 public class ArticlesMethods {
     private DocumentRetriever retriever;
@@ -93,31 +95,35 @@ public class ArticlesMethods {
         retrieveArticles(UrlHelpers.getSearchUrl(searchQuery, page), callback);
     }
 
-    private void retrieveArticles(String url, MyskuCallback<List<ArticlePreview>> callback) {
-        retriever.get(url, cookies)
-            .thenAccept(document -> {
-                List<ArticlePreview> articles = document.body().select(".topic")
-                    .stream()
-                    .map(element -> {
-                        String articleLink = element.select(".content > .a").attr("href");
-                        ArticleContent content = ArticleContentHelpers.parseArticleContent(element, articleLink);
+    private void retrieveArticles(String url, final MyskuCallback<List<ArticlePreview>> callback) {
+        retriever.get(url, cookies, new MyskuCallback<Document>() {
+            @Override
+            public void onSuccess(Document document) {
+                List<ArticlePreview> result = new ArrayList<>();
 
-                        String commentCount = element.select(".comments-total").text()
-                            .replace(element.select(".comments-total .comment-title").text(), "")
-                            .trim();
+                for (Element element : document.body().select(".topic")) {
+                    String articleLink = element.select(".content > .a").attr("href");
+                    ArticleContent content = ArticleContentHelpers.parseArticleContent(element, articleLink);
 
-                        return new ArticlePreviewBuilder()
-                            .setContent(content)
-                            .setCommentCount(commentCount)
-                            .build();
-                    })
-                    .collect(Collectors.toList());
+                    String commentCount = element.select(".comments-total").text()
+                        .replace(element.select(".comments-total .comment-title").text(), "")
+                        .trim();
 
-                callback.onSuccess(articles);
-            })
-            .exceptionally((Throwable throwable) -> {
-                callback.onError(new MyskuError(throwable));
-                return null;
-            });
+                    ArticlePreview articlePreview = new ArticlePreviewBuilder()
+                        .setContent(content)
+                        .setCommentCount(commentCount)
+                        .build();
+
+                    result.add(articlePreview);
+                }
+
+                callback.onSuccess(result);
+            }
+
+            @Override
+            public void onError(MyskuError error) {
+                callback.onError(error);
+            }
+        });
     }
 }

@@ -11,9 +11,6 @@ import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.*;
 
-/**
- * Created by Ivan_Akulov on 25-Dec-16.
- */
 public class ArticlesMethodsTest {
     private List<ArticlePreview> articlesResult;
 

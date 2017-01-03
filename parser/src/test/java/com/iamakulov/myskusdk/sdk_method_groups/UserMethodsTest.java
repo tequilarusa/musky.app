@@ -14,9 +14,6 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
-/**
- * Created by Ivan_Akulov on 25-Dec-16.
- */
 public class UserMethodsTest {
     private UserDetails userDetails;
     private List<Comment> userComments;
