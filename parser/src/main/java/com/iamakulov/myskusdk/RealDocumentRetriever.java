@@ -1,8 +1,6 @@
 package com.iamakulov.myskusdk;
 
 import okhttp3.*;
-import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.DefaultAsyncHttpClient;
 import org.jsoup.Jsoup;
 import android.os.AsyncTask;
 import org.jsoup.nodes.Document;
