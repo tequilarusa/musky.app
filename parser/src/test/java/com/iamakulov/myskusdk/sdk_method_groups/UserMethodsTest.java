@@ -63,17 +63,33 @@ public class UserMethodsTest {
         assertEquals("54", userDetails.getKarmaVoteCount());
         assertEquals("25 декабря 2016, 19:54", userDetails.getLastVisit());
         assertArrayEquals(
-            new Category[]{
-                createCategory("AliExpress", "http://mysku.ru/blog/aliexpress/"),
-                createCategory("Скидки и распродажи", "http://mysku.ru/blog/discounts/"),
-                createCategory("Магазины Китая", "http://mysku.ru/blog/china-stores/"),
+            new String[]{
+                "AliExpress",
+                "Скидки и распродажи",
+                "Магазины Китая",
             },
-            userDetails.getParticipation().toArray()
+            userDetails.getParticipation()
+                .stream()
+                .map(Category::getName)
+                .collect(Collectors.toList())
+                .toArray()
+        );
+        assertArrayEquals(
+            new String[]{
+                "http://mysku.ru/blog/aliexpress",
+                "http://mysku.ru/blog/discounts",
+                "http://mysku.ru/blog/china-stores",
+            },
+            userDetails.getParticipation()
+                .stream()
+                .map(category -> UrlHelpers.getCategoryUrlFromId(category.getId()))
+                .collect(Collectors.toList())
+                .toArray()
         );
 
         Map<String, String> personalDataMap = new HashMap<>();
         personalDataMap.put("Пол", "мужской");
-        personalDataMap.put("Местоположение", "\tУкраина");
+        personalDataMap.put("Местоположение", "Украина");
         personalDataMap.put("О себе", "skype - vbudennyj");
         assertEquals(
             personalDataMap,
@@ -130,7 +146,7 @@ public class UserMethodsTest {
                 .toArray()
         );
         assertArrayEquals(
-            new String[]{"Zoolog", "WOLFRIEND"},
+            new String[]{"WOLFRIEND", "Zoolog"},
             userDetails.getSubscriptions()
                 .stream()
                 .map(User::getUsername)
@@ -145,12 +161,12 @@ public class UserMethodsTest {
         int customPage = 5;
 
         DocumentRetriever retriever = TestHelpers.createCustomRetrieverWithUrlCheck(
-            "http://mysku.ru/my/Samodelkin/comment/page" + customPage + "/",
-            "user_details.html"
+            "http://mysku.ru/my/Samodelkin/comment/page" + (customPage + 1) + "/",
+            "user_comments.html"
         );
         MyskuSdk sdk = MyskuSdkFactory.createSdkWithCustomRetriever(retriever);
 
-        sdk.user().getUserComments(new User.Id("Samodelkin"), new MyskuCallback<List<Comment>>() {
+        sdk.user().getUserComments(new User.Id("Samodelkin"), customPage, new MyskuCallback<List<Comment>>() {
             @Override
             public void onSuccess(List<Comment> result) {
                 userComments = result;

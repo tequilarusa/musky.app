@@ -101,6 +101,6 @@ public class UrlHelpers {
     }
 
     public static String getUserCommentsUrlFromId(User.Id userId, int page) {
-        return BASE_ADDRESS + "/profile/" + userId.id + "/comment/page" + (page + 1) + "/";
+        return BASE_ADDRESS + "/my/" + userId.id + "/comment/page" + (page + 1) + "/";
     }
 }

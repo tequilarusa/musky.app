@@ -9,6 +9,7 @@ import com.iamakulov.myskusdk.helpers.UrlHelpers;
 import com.iamakulov.myskusdk.helpers.UserHelpers;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,11 +31,21 @@ public class UserMethods {
             public void onSuccess(Document document) {
                 Element body = document.body();
 
-                String autodetectedCountry = getRowDataByTitle(body, "Автоопределение страны:").text();
-                List<User> friends = extractUsersFromLinksList(getRowDataByTitle(body, "Друзья:"));
+                Element autodetectedCountryRow = getRowDataByTitle(body, "Автоопределение страны:");
+                String autodetectedCountry = autodetectedCountryRow != null ?
+                    autodetectedCountryRow.text() :
+                    "";
+
+                Element friendsRow = getRowDataByTitle(body, "Друзья:");
+                List<User> friends = friendsRow != null ?
+                    extractUsersFromLinksList(friendsRow) :
+                    new ArrayList<User>();
+
                 String karma = body.select(".vote_block .total").text();
                 String karmaVoteCount = body.select(".vote_block .count").text();
-                String lastVisit = getRowDataByTitle(body, "Последний визит:").text();
+
+                Element lastVisitRow = getRowDataByTitle(body, "Последний визит:");
+                String lastVisit = lastVisitRow != null ? lastVisitRow.text() : "";
 
                 List<Category> participation = new ArrayList<>();
                 for (Element e : getRowDataByTitle(body, "Состоит в:").select("a")) {
@@ -46,28 +57,38 @@ public class UserMethods {
                     );
                 }
 
-
-
                 Element personalTable = null;
                 for (Element element : body.select(".title")) {
                     if (element.text().equals("Личное")) {
-                        personalTable = element.select("+ table").first();
+                        personalTable = element.nextElementSibling();
                         break;
                     }
                 }
 
                 Map<String, String> personalData = new HashMap<>();
-                for (Element element : personalTable.select("tr")) {
-                    personalData.put(
-                        element.select("td:first-child").text(),
-                        element.select("td:last-child").text()
-                    );
+                if (personalTable != null) {
+                    Elements personalTableRows = personalTable.select("tr");
+                    for (Element element : personalTableRows) {
+                        personalData.put(
+                            element.select("td:first-child").text().trim().replaceAll(":$", ""),
+                            element.select("td:last-child").text().trim()
+                        );
+                    }
                 }
 
-                String realName = body.select(".nickname .note").text();
+                String realName = body.select(".nickname .note").text().replaceAll("^\\(", "").replaceAll("\\)$", "");
                 String registered = getRowDataByTitle(body, "Зарегистрирован:").text();
-                List<User> subscribers = extractUsersFromLinksList(getRowDataByTitle(body, "Читатели:"));
-                List<User> subscriptions = extractUsersFromLinksList(getRowDataByTitle(body, "Подписан на:"));
+
+                Element subscribersRow = getRowDataByTitle(body, "Читатели:");
+                List<User> subscribers = subscribersRow != null ?
+                    extractUsersFromLinksList(subscribersRow) :
+                    new ArrayList<User>();
+
+                Element subscriptionsRow = getRowDataByTitle(body, "Подписан на:");
+                List<User> subscriptions = subscriptionsRow != null ?
+                    extractUsersFromLinksList(subscriptionsRow) :
+                    new ArrayList<User>();
+
                 String username = body.select(".nickname").text()
                     .replace(realName, "");
 
@@ -132,7 +153,7 @@ public class UserMethods {
 
                 for (Element element : document.body().select("#content .comment")) {
                     String username = element.select(".author").text();
-                    String authorThumbnail = element.select(".avatar").attr("href");
+                    String authorThumbnail = element.select(".avatar").attr("src");
                     String body = element.select(".text").text();
                     String date = element.select(".date").text();
                     Comment.Id id = new Comment.Id(
